@@ -4,7 +4,6 @@ use crate::{
     VOXEL_SHADER_HANDLE, VOXEL_SIZE,
 };
 use bevy::{
-    core::FloatOrd,
     ecs::system::{
         lifetimeless::{Read, SQuery},
         SystemParamItem,
@@ -12,26 +11,28 @@ use bevy::{
     pbr::{
         DrawMesh, GlobalLightMeta, LightMeta, MeshPipeline, MeshPipelineKey, MeshViewBindGroup,
         SetMaterialBindGroup, SetMeshBindGroup, SetMeshViewBindGroup, ShadowPipeline,
-        SpecializedMaterial, ViewClusterBindings, ViewLightsUniformOffset, ViewShadowBindings,
+        Material, ViewClusterBindings, ViewLightsUniformOffset, ViewShadowBindings,
     },
     prelude::*,
     render::{
         camera::CameraProjection,
         mesh::MeshVertexBufferLayout,
         primitives::{Aabb, Frustum},
-        render_asset::RenderAssets,
+        render_asset::{RenderAssets, RenderAsset},
         render_graph::{self, SlotInfo, SlotType},
         render_phase::{
             AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId, DrawFunctions,
             EntityPhaseItem, EntityRenderCommand, PhaseItem, RenderCommandResult, RenderPhase,
             SetItemPipeline, TrackedRenderPass,
         },
-        render_resource::{std140::AsStd140, *},
+        render_resource::*,
         renderer::RenderDevice,
         view::{ExtractedView, RenderLayers, ViewUniforms, VisibleEntities},
         RenderApp, RenderStage,
     },
 };
+use bevy_utils::FloatOrd;
+use crevice::std140::AsStd140;
 use itertools::Itertools;
 use std::{borrow::Cow, f32::consts::FRAC_PI_2, marker::PhantomData, num::NonZeroU32};
 
@@ -56,8 +57,8 @@ impl Plugin for VoxelPlugin {
 
 /// The plugin registers the voxel draw functions/systems for a [`SpecializedMaterial`].
 #[derive(Default)]
-pub struct VoxelMaterialPlugin<M: SpecializedMaterial>(PhantomData<M>);
-impl<M: SpecializedMaterial> Plugin for VoxelMaterialPlugin<M> {
+pub struct VoxelMaterialPlugin<M: Material>(PhantomData<M>);
+impl<M: Material> Plugin for VoxelMaterialPlugin<M> {
     fn build(&self, app: &mut App) {
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
@@ -574,7 +575,7 @@ fn queue_voxel_bind_groups(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn queue_voxel_meshes<M: SpecializedMaterial>(
+pub fn queue_voxel_meshes<M: Material + RenderAsset>(
     voxel_draw_functions: Res<DrawFunctions<Voxel>>,
     voxel_pipeline: Res<VoxelPipeline>,
     material_meshes: Query<(&Handle<M>, &Handle<Mesh>)>,

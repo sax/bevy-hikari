@@ -1,15 +1,15 @@
 use crate::{overlay::GpuScreenOverlay, GiConfig, ALBEDO_SHADER_HANDLE};
 use bevy::{
-    core_pipeline::{AlphaMask3d, Opaque3d, Transparent3d},
+    core_pipeline::core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     pbr::{
         DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMaterialBindGroup,
-        SetMeshBindGroup, SetMeshViewBindGroup, SpecializedMaterial,
+        SetMeshBindGroup, SetMeshViewBindGroup,
     },
     prelude::FromWorld,
     prelude::*,
     render::{
         mesh::MeshVertexBufferLayout,
-        render_asset::RenderAssets,
+        render_asset::{RenderAssets, RenderAsset},
         render_graph::{self, SlotInfo, SlotType},
         render_phase::{
             sort_phase_system, AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId,
@@ -51,8 +51,8 @@ impl Plugin for DeferredPlugin {
 }
 
 #[derive(Default)]
-pub struct DeferredMaterialPlugin<M: SpecializedMaterial>(PhantomData<M>);
-impl<M: SpecializedMaterial> Plugin for DeferredMaterialPlugin<M> {
+pub struct DeferredMaterialPlugin<M: Material>(PhantomData<M>);
+impl<M: Material> Plugin for DeferredMaterialPlugin<M> {
     fn build(&self, app: &mut App) {
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
@@ -150,7 +150,7 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-fn queue_deferred_meshes<M: SpecializedMaterial>(
+fn queue_deferred_meshes<M: Material + RenderAsset>(
     opaque_draw_functions: Res<DrawFunctions<Deferred<Opaque3d>>>,
     alpha_mask_draw_functions: Res<DrawFunctions<Deferred<AlphaMask3d>>>,
     transparent_draw_functions: Res<DrawFunctions<Deferred<Transparent3d>>>,

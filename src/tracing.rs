@@ -3,32 +3,30 @@ use crate::{
     VolumeMeta, VolumeUniformOffset, TRACING_SHADER_HANDLE,
 };
 use bevy::{
-    core::FloatOrd,
-    core_pipeline::{AlphaMask3d, Opaque3d, Transparent3d},
+    core_pipeline::core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     ecs::system::lifetimeless::{Read, SQuery},
     pbr::{
         DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMaterialBindGroup,
-        SetMeshBindGroup, SetMeshViewBindGroup, SpecializedMaterial,
+        SetMeshBindGroup, SetMeshViewBindGroup,
     },
     prelude::*,
     render::{
         mesh::MeshVertexBufferLayout,
-        render_asset::RenderAssets,
+        render_asset::{RenderAsset, RenderAssets},
         render_graph::{self, SlotInfo, SlotType},
         render_phase::{
             sort_phase_system, AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId,
             DrawFunctions, EntityPhaseItem, EntityRenderCommand, PhaseItem, RenderCommandResult,
             RenderPhase, SetItemPipeline, TrackedRenderPass,
         },
-        render_resource::{
-            std140::{AsStd140, Std140},
-            *,
-        },
+        render_resource::*,
         renderer::RenderDevice,
         view::{ExtractedView, VisibleEntities},
         RenderApp, RenderStage,
     },
 };
+use bevy_utils::FloatOrd;
+use crevice::std140::{AsStd140, BVec3, Std140};
 use std::marker::PhantomData;
 
 pub struct TracingPlugin;
@@ -67,8 +65,8 @@ impl Plugin for TracingPlugin {
 
 /// The plugin registers the GI draw functions/systems for a [`SpecializedMaterial`].
 #[derive(Default)]
-pub struct TracingMaterialPlugin<M: SpecializedMaterial>(PhantomData<M>);
-impl<M: SpecializedMaterial> Plugin for TracingMaterialPlugin<M> {
+pub struct TracingMaterialPlugin<M: Material>(PhantomData<M>);
+impl<M: Material> Plugin for TracingMaterialPlugin<M> {
     fn build(&self, app: &mut App) {
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
@@ -224,27 +222,27 @@ impl FromWorld for DirectionsUniform {
 
 #[derive(AsStd140)]
 struct GpuDirections {
-    data: [Vec3; 14],
+    data: [BVec3; 14],
 }
 
 impl Default for GpuDirections {
     fn default() -> Self {
         Self {
             data: [
-                Vec3::new(1.0, 1.0, 1.0),
-                Vec3::new(-1.0, 1.0, 1.0),
-                Vec3::new(1.0, -1.0, 1.0),
-                Vec3::new(-1.0, -1.0, 1.0),
-                Vec3::new(1.0, 1.0, -1.0),
-                Vec3::new(-1.0, 1.0, -1.0),
-                Vec3::new(1.0, -1.0, -1.0),
-                Vec3::new(-1.0, -1.0, -1.0),
-                Vec3::new(1.0, 0.0, 0.0),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec3::new(0.0, 0.0, 1.0),
-                Vec3::new(-1.0, 0.0, 0.0),
-                Vec3::new(0.0, -1.0, 0.0),
-                Vec3::new(0.0, 0.0, -1.0),
+                BVec3::new(1.0, 1.0, 1.0),
+                BVec3::new(-1.0, 1.0, 1.0),
+                BVec3::new(1.0, -1.0, 1.0),
+                BVec3::new(-1.0, -1.0, 1.0),
+                BVec3::new(1.0, 1.0, -1.0),
+                BVec3::new(-1.0, 1.0, -1.0),
+                BVec3::new(1.0, -1.0, -1.0),
+                BVec3::new(-1.0, -1.0, -1.0),
+                BVec3::new(1.0, 0.0, 0.0),
+                BVec3::new(0.0, 1.0, 0.0),
+                BVec3::new(0.0, 0.0, 1.0),
+                BVec3::new(-1.0, 0.0, 0.0),
+                BVec3::new(0.0, -1.0, 0.0),
+                BVec3::new(0.0, 0.0, -1.0),
             ],
         }
     }
@@ -266,7 +264,7 @@ fn extract_receiver(
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-fn queue_tracing_meshes<M: SpecializedMaterial>(
+fn queue_tracing_meshes<M: Material + RenderAsset>(
     opaque_draw_functions: Res<DrawFunctions<Tracing<Opaque3d>>>,
     alpha_mask_draw_functions: Res<DrawFunctions<Tracing<AlphaMask3d>>>,
     transparent_draw_functions: Res<DrawFunctions<Tracing<Transparent3d>>>,

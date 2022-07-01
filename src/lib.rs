@@ -5,19 +5,23 @@
 
 use self::{deferred::*, overlay::*, tracing::*, voxel::*};
 use bevy::{
-    core_pipeline::{self, AlphaMask3d, Opaque3d, Transparent3d},
+    core_pipeline::{
+        self,
+        core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
+    },
     prelude::*,
     reflect::TypeUuid,
     render::{
         render_graph::RenderGraph,
         render_phase::RenderPhase,
-        render_resource::{std140::AsStd140, *},
+        render_resource::*,
         renderer::{RenderDevice, RenderQueue},
         texture::{BevyDefault, CachedTexture, TextureCache},
         RenderApp, RenderStage,
     },
     utils::HashMap,
 };
+use crevice::std140::{AsStd140, BVec3};
 
 mod deferred;
 mod overlay;
@@ -264,8 +268,8 @@ pub struct VolumeBindings {
 
 #[derive(Clone, AsStd140)]
 pub struct GpuVolume {
-    min: Vec3,
-    max: Vec3,
+    min: BVec3,
+    max: BVec3,
 }
 
 #[derive(AsStd140)]
@@ -275,7 +279,7 @@ pub struct GpuVoxelBuffer {
 
 #[derive(Default)]
 pub struct VolumeMeta {
-    volume_uniforms: DynamicUniformVec<GpuVolume>,
+    volume_uniforms: DynamicUniformBuffer<GpuVolume>,
     voxel_buffers: HashMap<Entity, Buffer>,
 }
 

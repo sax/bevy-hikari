@@ -1,10 +1,9 @@
 use crate::{GiConfig, Volume, OVERLAY_SHADER_HANDLE};
 use bevy::{
-    core::FloatOrd,
     ecs::system::{lifetimeless::SRes, SystemParamItem},
     pbr::{
         DrawMesh, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey, SetMaterialBindGroup,
-        SetMeshBindGroup, SetMeshViewBindGroup, SpecializedMaterial,
+        SetMeshBindGroup, SetMeshViewBindGroup,
     },
     prelude::*,
     reflect::TypeUuid,
@@ -24,6 +23,7 @@ use bevy::{
         RenderApp, RenderStage,
     },
 };
+use bevy_utils::FloatOrd;
 
 pub struct OverlayPlugin;
 
@@ -186,7 +186,7 @@ impl GpuScreenOverlay {
     }
 }
 
-#[derive(Debug, Clone, TypeUuid)]
+#[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "3eb25222-95fd-11ec-b909-0242ac120002"]
 pub struct OverlayMaterial {
     pub irradiance: Handle<Image>,
@@ -251,10 +251,10 @@ impl RenderAsset for OverlayMaterial {
     }
 }
 
-impl SpecializedMaterial for OverlayMaterial {
-    type Key = ();
+impl Material for OverlayMaterial {
+    // type Key = ();
 
-    fn key(_material: &<Self as RenderAsset>::PreparedAsset) -> Self::Key {}
+    // fn key(_material: &<Self as RenderAsset>::PreparedAsset) -> Self::Key {}
 
     fn vertex_shader(_asset_server: &AssetServer) -> Option<Handle<Shader>> {
         Some(OVERLAY_SHADER_HANDLE.typed())
@@ -264,55 +264,55 @@ impl SpecializedMaterial for OverlayMaterial {
         Some(OVERLAY_SHADER_HANDLE.typed())
     }
 
-    fn bind_group(render_asset: &<Self as RenderAsset>::PreparedAsset) -> &BindGroup {
-        &render_asset.bind_group
-    }
+    // fn bind_group(render_asset: &<Self as RenderAsset>::PreparedAsset) -> &BindGroup {
+    //     &render_asset.bind_group
+    // }
 
-    fn bind_group_layout(render_device: &RenderDevice) -> BindGroupLayout {
-        render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        sample_type: TextureSampleType::default(),
-                        view_dimension: TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        sample_type: TextureSampleType::default(),
-                        view_dimension: TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("overlay_layout"),
-        })
-    }
+    // fn bind_group_layout(render_device: &RenderDevice) -> BindGroupLayout {
+    //     render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+    //         entries: &[
+    //             BindGroupLayoutEntry {
+    //                 binding: 0,
+    //                 visibility: ShaderStages::FRAGMENT,
+    //                 ty: BindingType::Texture {
+    //                     sample_type: TextureSampleType::default(),
+    //                     view_dimension: TextureViewDimension::D2,
+    //                     multisampled: false,
+    //                 },
+    //                 count: None,
+    //             },
+    //             BindGroupLayoutEntry {
+    //                 binding: 1,
+    //                 visibility: ShaderStages::FRAGMENT,
+    //                 ty: BindingType::Sampler(SamplerBindingType::Filtering),
+    //                 count: None,
+    //             },
+    //             BindGroupLayoutEntry {
+    //                 binding: 2,
+    //                 visibility: ShaderStages::FRAGMENT,
+    //                 ty: BindingType::Texture {
+    //                     sample_type: TextureSampleType::default(),
+    //                     view_dimension: TextureViewDimension::D2,
+    //                     multisampled: false,
+    //                 },
+    //                 count: None,
+    //             },
+    //             BindGroupLayoutEntry {
+    //                 binding: 3,
+    //                 visibility: ShaderStages::FRAGMENT,
+    //                 ty: BindingType::Sampler(SamplerBindingType::Filtering),
+    //                 count: None,
+    //             },
+    //         ],
+    //         label: Some("overlay_layout"),
+    //     })
+    // }
 
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
-        key: Self::Key,
         _layout: &MeshVertexBufferLayout,
+        key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.fragment.as_mut().unwrap().targets[0].blend = Some(BlendState {
             color: BlendComponent {
@@ -353,7 +353,7 @@ fn setup(
 fn update(mut images: ResMut<Assets<Image>>, mut overlay: ResMut<ScreenOverlay>, msaa: Res<Msaa>) {
     if msaa.is_changed() {
         overlay.irradiance_sampled = if msaa.samples > 1 {
-            let mut image = images.get(overlay.irradiance.clone()).unwrap().clone();
+            let mut image = images.get(&overlay.irradiance).unwrap().clone();
             image.texture_descriptor.sample_count = msaa.samples;
             Some(images.add(image))
         } else {
@@ -361,7 +361,7 @@ fn update(mut images: ResMut<Assets<Image>>, mut overlay: ResMut<ScreenOverlay>,
         };
 
         overlay.albedo_sampled = if msaa.samples > 1 {
-            let mut image = images.get(overlay.albedo.clone()).unwrap().clone();
+            let mut image = images.get(&overlay.albedo).unwrap().clone();
             image.texture_descriptor.sample_count = msaa.samples;
             Some(images.add(image))
         } else {
@@ -482,11 +482,11 @@ fn queue_material_meshes(
                         .specialize(
                             &mut pipeline_cache,
                             &material_pipeline,
+                            &mesh.layout,
                             MaterialPipelineKey {
                                 mesh_key,
                                 material_key,
                             },
-                            &mesh.layout,
                         )
                         .unwrap();
 
